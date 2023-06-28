@@ -1,24 +1,31 @@
-package com.techeer.checkitbatch.crawling;
+package com.techeer.checkitbatch.domain.selenium;
 
+import com.techeer.checkitbatch.domain.book.entity.Book;
+import com.techeer.checkitbatch.domain.book.repository.BookRepository;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
-@Component
+@Service
+@RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class Selenium {
     private WebDriver driver;
 
     private static final String url = "http://www.yes24.com/main/default.aspx";
 
-    public void process() {
+    private final BookRepository bookRepository;
+
+    public void crawling() {
         log.info("*** 크롤링 시작 ***");
 
         System.setProperty("webdriver.chrome.driver", "/Users/misis1/myProject/Techeer-Book/checkitbatch/src/main/java/com/techeer/checkitbatch/crawling/chromedriver");
@@ -49,12 +56,21 @@ public class Selenium {
     }
 
     private void setting() throws InterruptedException {
+        log.info("*** YES24 홈페이지로 이동 ***");
         Thread.sleep(500);
-        driver.get(url);    //브라우저에서 url로 이동한다.
+        driver.get(url);
 
+        log.info("*** 광고 배너 제거 ***");
+        try {
 //        driver.findElement(By.xpath("//*[@id=\"swrap\"]/div/div/div/div[2]/a[2]/em")).click();
-        driver.findElement(By.xpath("//*[@id=\"chk_info\"]")).click();
+            driver.findElement(By.xpath("//*[@id=\"chk_info\"]")).click();
 
+        } catch (Exception e) {
+            log.info(e.getMessage());
+            log.info("*** 광고 배너 제거 실패 ***");
+        }
+
+        log.info("*** 국내 도서로 이동 ***");
         WebElement koreanBooks = driver.findElement(By.xpath("//*[@id=\"ulCategoryList\"]/li[1]/a/em"));
         koreanBooks.click();
     }
@@ -118,15 +134,75 @@ public class Selenium {
         Thread.sleep(500);
         driver.get(bookUrl);
 
-        String title = driver.findElement(By.xpath("//*[@id=\"yDetailTopWrap\"]/div[2]/div[1]/div/h2")).getText();
-        String author = driver.findElement(By.xpath("//*[@id=\"yDetailTopWrap\"]/div[2]/div[1]/span[2]/span[1]")).getText();
-        String publisher = driver.findElement(By.xpath("//*[@id=\"yDetailTopWrap\"]/div[2]/div[1]/span[2]/span[2]/a")).getText();
+        try {
+            String title = driver.findElement(By.xpath("//*[@id=\"yDetailTopWrap\"]/div[2]/div[1]/div/h2")).getText();
+            String author = driver.findElement(By.xpath("//*[@id=\"yDetailTopWrap\"]/div[2]/div[1]/span[2]/span[1]")).getText();
+            String publisher = driver.findElement(By.xpath("//*[@id=\"yDetailTopWrap\"]/div[2]/div[1]/span[2]/span[2]/a")).getText();
 
+            // image url의 경로를 얻는 방법이 2가지 있음, 1번이 안되면 2번으로 얻는 로직
+            boolean flag = driver.findElements(By.xpath("//*[@id=\"yDetailTopWrap\"]/div[1]/div/span/em/img")).size() > 0;
+            String coverImageUrl = "";
+            if (flag) {
+                coverImageUrl = driver.findElement(By.xpath("//*[@id=\"yDetailTopWrap\"]/div[1]/div/span/em/img")).getAttribute("src");
+            }
+            else {
+                coverImageUrl = driver.findElement(By.xpath("//*[@id=\"yDetailTopWrap\"]/div[1]/div/div[2]/div/span[1]/em/img")).getAttribute("src");
+            }
 
-        log.info(title);
-        log.info(author);
-        log.info(publisher);
+            String infoText = driver.findElement(By.xpath("//*[@id=\"infoset_specific\"]/div[2]/div/table/tbody")).getText();
 
-        driver.navigate().back();
+            String[] bookSize = infoText.split("쪽수, 무게, 크기 ")[1].split("mm")[0].split("\\|");
+            String[] size = {};
+
+            if(bookSize.length > 2) size = bookSize[2].replace(" ","").split("\\*");
+            else size = bookSize[1].replace(" ","").split("\\*");
+
+            String pages = bookSize[0].split("쪽 ")[0];
+
+            String width = size[0];
+            String height = size[1];
+            String thickness = size[2];
+
+            String category = driver.findElement(By.xpath("//*[@id=\"infoset_goodsCate\"]/div[2]/dl[1]/dd/ul")).getText();
+
+            Book book = Book.builder()
+                    .title(title)
+                    .author(author)
+                    .publisher(publisher)
+                    .coverImageUrl(coverImageUrl)
+                    .pages(Integer.parseInt(pages))
+                    .width(Integer.parseInt(width))
+                    .height(Integer.parseInt(height))
+                    .thickness(Integer.parseInt(thickness))
+                    .category(category)
+                    .build();
+
+            bookRepository.save(book);
+
+            log.info(title);
+            log.info(author);
+            log.info(publisher);
+            log.info(coverImageUrl);
+//            log.info(infoText);
+
+            log.info(pages);
+            log.info(width);
+            log.info(height);
+            log.info(thickness);
+
+            log.info(category);
+
+        } catch (Exception e) {
+            log.info(e.getMessage());
+            log.info("크롤링 또는 mongodb에 저장 실패");
+        }
+
+        try {
+            driver.navigate().back();
+        } catch (Exception e) {
+            log.info(e.getMessage());
+            Thread.sleep(5000);
+            driver.navigate().back();
+        }
     }
 }
