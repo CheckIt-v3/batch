@@ -1,7 +1,6 @@
 package com.techeer.checkitbatch.domain.selenium;
 
 import com.techeer.checkitbatch.domain.book.entity.Book;
-import com.techeer.checkitbatch.domain.book.repository.BookRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +22,7 @@ public class Selenium {
 
     private static final String url = "http://www.yes24.com/main/default.aspx";
 
-    private final BookRepository bookRepository;
+//    private final BookMongoRepository bookRepository;
 
     public void crawling() {
         log.info("*** 크롤링 시작 ***");
@@ -177,7 +176,7 @@ public class Selenium {
                     .category(category)
                     .build();
 
-            bookRepository.save(book);
+//            bookRepository.save(book);
 
             log.info(title);
             log.info(author);
