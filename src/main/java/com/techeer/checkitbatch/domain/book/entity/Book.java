@@ -6,10 +6,10 @@ import lombok.*;
 import javax.persistence.*;
 
 @Getter
-@Table(name = "BOOKS")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Book extends BaseEntity {
     private String id;
+    private Long mySqlId;
     private String title;
     private String author;
     private String publisher;

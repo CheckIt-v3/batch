@@ -26,9 +26,7 @@ public class DatabaseConfig {
 
     @Value("${spring.data.mongodb.uri}")
     private String mongoUri;
-
     @Bean
-    @BatchDataSource
     public MongoTemplate mongoDb() {
         SimpleMongoClientDatabaseFactory databaseFactory = new SimpleMongoClientDatabaseFactory(mongoUri);
         return new MongoTemplate(databaseFactory);
