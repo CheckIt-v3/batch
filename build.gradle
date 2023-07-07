@@ -30,15 +30,27 @@ dependencies {
 	//selenium 라이브러리
 	implementation 'org.seleniumhq.selenium:selenium-java:4.10.0'
 	implementation 'org.seleniumhq.selenium:selenium-devtools-v86:4.0.0-alpha-7'
+	// redis
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.h2database:h2'
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'
-//	annotationProcessor "jakarta.persistence:jakarta.persistence-api"
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.batch:spring-batch-test'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+tasks.named("bootBuildImage") { // ./gradlew bootBuildImage 시 docker hub로 배포
+	imageName = project.DOCKER_ID + "/" + project.DOCKER_IMAGE_NAME
+	publish = true
+	docker {
+		publishRegistry {
+			username = project.DOCKER_ID
+			password = project.DOCKER_PW
+		}
+	}
 }
