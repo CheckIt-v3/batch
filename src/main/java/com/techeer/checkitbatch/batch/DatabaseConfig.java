@@ -1,6 +1,7 @@
 package com.techeer.checkitbatch.batch;
 
 import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.batch.BatchDataSource;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -33,6 +34,7 @@ public class DatabaseConfig {
     }
 
     @Bean
+    @Qualifier("mysqlDataSource")
     @BatchDataSource
     @ConfigurationProperties("spring.datasource-mysql")
     DataSource mysqlDb(){
@@ -40,7 +42,4 @@ public class DatabaseConfig {
         builder.type(HikariDataSource.class);
         return builder.build();
     }
-
-
-
 }
