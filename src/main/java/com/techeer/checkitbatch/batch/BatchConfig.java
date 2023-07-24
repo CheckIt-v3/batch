@@ -40,6 +40,7 @@ public class BatchConfig {
     private static final int chunkSize = 1000;
 
     @Bean
+    // feat/#1
     public Job mongodbToMySQLJob() {
         log.info("mongodbToMySQLJob() 시작"); // 로그 추가
         return jobBuilderFactory.get("mongodbToMySQLJob")
@@ -48,7 +49,17 @@ public class BatchConfig {
     }
 
     @Bean
+    public Job job(Step crawling){
+        return jobBuilderFactory.get("Update DB")
+                .start(crawling)
+//                .next(crawling)
+                .build();
+    }
+
+
+    @Bean
     @JobScope
+  // feat/#1
     public Step mongodbToMySQLStep() {
         return stepBuilderFactory.get("mongodbToMySQLStep")
                 .<Book, Book>chunk(4)
@@ -58,7 +69,26 @@ public class BatchConfig {
     }
 
     @Bean
+    @JobScope
+    public Step crawling(ItemReader trBookReader){
+        return stepBuilderFactory.get("crawling")
+                .allowStartIfComplete(true)
+                .<Book, Book>chunk(chunkSize)
+                .reader(trBookReader)
+                .writer(new ItemWriter<Book>() {
+                    @Override
+                    public void write(List<? extends Book> items) throws Exception {
+                        for(Book book : items) {
+                            log.info("********* "+book.getTitle()+" *******");
+                        }
+                    }
+                })
+                .build();
+    }
+
+    @Bean
     @StepScope
+// feat/#1
     public CustomMongoItemReader<Book> mongodbItemReader() {
         CustomMongoItemReader<Book> reader = new CustomMongoItemReader<>(mongoTemplate, "newBook", Book.class);
         reader.setQuery("{}");
@@ -74,5 +104,20 @@ public class BatchConfig {
                 "VALUES (:title, :author, :publisher, :coverImageUrl, :pages, :height, :width, :thickness, :category)");
         writer.setDataSource(mysqlDataSource);
         return writer;
+    }
+
+    @Bean
+    @StepScope
+    public MongoItemReader<Book> trBookReader(MongoTemplate mongoTemplate) {
+        return new MongoItemReaderBuilder<Book>()
+                .name("trBookReader")
+                .targetType(Book.class)
+                .jsonQuery("{}")
+                .collection("book")
+                .pageSize(chunkSize)
+                .sorts(Collections.singletonMap("created_at", Sort.Direction.ASC))
+                .template(mongoTemplate)
+                .targetType(Book.class)
+                .build();
     }
 }

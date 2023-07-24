@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -126,7 +125,14 @@ public class Selenium {
             }
 
             for(String bookUrl : bookUrlList) {
-                getInfo(bookUrl);
+                String isCrawled = (String) redisTemplate.opsForValue().get("id:"+bookUrl);
+                if(isCrawled != null && isCrawled.equals("crawled")) {
+                    log.info("이미 크롤링 된 책입니다.");
+                }
+                else {
+                    redisTemplate.opsForValue().set("id:" + bookUrl, "crawled");
+                    getInfo(bookUrl);
+                }
             }
 
         }
@@ -179,10 +185,6 @@ public class Selenium {
                     .category(category)
                     .build();
 
-            String isCrawled = (String) redisTemplate.opsForValue().get("id:"+book.getTitle());
-            if(isCrawled != null && isCrawled.equals("crawled")){
-                redisTemplate.opsForValue().set("id:" + book.getTitle(), "crawled");
-
                 // list에 add 해주기
 
                 log.info(title);
@@ -196,8 +198,6 @@ public class Selenium {
                 log.info(thickness);
 
                 log.info(category);
-            }
-            else log.info("이미 크롤링 된 책입니다.");
 //            bookRepository.save(book);
 
 
