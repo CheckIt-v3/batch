@@ -47,13 +47,16 @@ public class BatchConfig {
     public Job job(Step crawling){
         return jobBuilderFactory.get("Update DB")
                 .start(crawling)
+//                .next(crawling)
                 .build();
     }
+
 
     @Bean
     @JobScope
     public Step crawling(ItemReader trBookReader){
         return stepBuilderFactory.get("crawling")
+                .allowStartIfComplete(true)
                 .<Book, Book>chunk(chunkSize)
                 .reader(trBookReader)
                 .writer(new ItemWriter<Book>() {
@@ -69,34 +72,20 @@ public class BatchConfig {
 
     @Bean
     @StepScope
-    public MongoItemReader<Book> trBookReader(MongoOperations mongoTemplate) {
+    public MongoItemReader<Book> trBookReader(MongoTemplate mongoTemplate) {
         return new MongoItemReaderBuilder<Book>()
-                .name("tweetsItemReader")
-//                .targetType(Book.class)
-                .jsonQuery("{title : \"임신 출산 육아 대백과\"}")
-//                .collection("book")
-//                .pageSize(chunkSize)
-//                .sorts(Collections.singletonMap("created_at", Sort.Direction.ASC))
+                .name("trBookReader")
+                .targetType(Book.class)
+                .jsonQuery("{}")
+                .collection("book")
+                .pageSize(chunkSize)
+                .sorts(Collections.singletonMap("created_at", Sort.Direction.ASC))
                 .template(mongoTemplate)
                 .targetType(Book.class)
                 .build();
     }
-
-
-//    @Bean
-//    public Job simpleJob() {
-//        return jobBuilderFactory.get("simpleJob")
-//                .start(simpleStep1())
-//                .build();
-//    }
 //
 //    @Bean
-//    public Step simpleStep1() {
-//        return stepBuilderFactory.get("simpleStep1")
-//                .tasklet((contribution, chunkContext) -> {
-//                    log.info(">>>>> This is Step1");
-//                    return RepeatStatus.FINISHED;
-//                })
-//                .build();
-//    }
+//    @StepScope
+//    public Item
 }
