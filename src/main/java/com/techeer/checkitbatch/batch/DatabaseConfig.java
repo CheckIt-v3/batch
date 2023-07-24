@@ -43,6 +43,7 @@ public class DatabaseConfig extends DefaultBatchConfigurer {
     }
 
     @Bean
+    @Qualifier("mysqlDataSource")
     @BatchDataSource
     @ConfigurationProperties("spring.datasource-mysql")
     DataSource mysqlDb(){
@@ -50,7 +51,4 @@ public class DatabaseConfig extends DefaultBatchConfigurer {
         builder.type(HikariDataSource.class);
         return builder.build();
     }
-
-
-
 }

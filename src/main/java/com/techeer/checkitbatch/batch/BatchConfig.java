@@ -1,36 +1,29 @@
 package com.techeer.checkitbatch.batch;
 
 import com.techeer.checkitbatch.domain.book.entity.Book;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.explore.JobExplorer;
-import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.item.data.MongoItemReader;
-import org.springframework.batch.item.data.builder.MongoItemReaderBuilder;
-import org.springframework.batch.item.database.JdbcCursorItemReader;
-import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
+import org.springframework.batch.item.database.JdbcBatchItemWriter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
-
+import javax.sql.DataSource;
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Configuration
@@ -41,7 +34,19 @@ public class BatchConfig {
     private final StepBuilderFactory stepBuilderFactory;
     private final JobExplorer jobExplorer;
     private final MongoTemplate mongoTemplate;
+    @Autowired
+    @Qualifier("mysqlDataSource")
+    private final DataSource mysqlDataSource;
     private static final int chunkSize = 1000;
+
+    @Bean
+    // feat/#1
+    public Job mongodbToMySQLJob() {
+        log.info("mongodbToMySQLJob() 시작"); // 로그 추가
+        return jobBuilderFactory.get("mongodbToMySQLJob")
+                .start(mongodbToMySQLStep())
+                .build();
+    }
 
     @Bean
     public Job job(Step crawling){
@@ -51,6 +56,17 @@ public class BatchConfig {
                 .build();
     }
 
+
+    @Bean
+    @JobScope
+  // feat/#1
+    public Step mongodbToMySQLStep() {
+        return stepBuilderFactory.get("mongodbToMySQLStep")
+                .<Book, Book>chunk(4)
+                .reader(mongodbItemReader())
+                .writer(jdbcItemWriter())
+                .build();
+    }
 
     @Bean
     @JobScope
@@ -72,6 +88,26 @@ public class BatchConfig {
 
     @Bean
     @StepScope
+// feat/#1
+    public CustomMongoItemReader<Book> mongodbItemReader() {
+        CustomMongoItemReader<Book> reader = new CustomMongoItemReader<>(mongoTemplate, "newBook", Book.class);
+        reader.setQuery("{}");
+        reader.setSort(Collections.singletonMap("created_at", Sort.Direction.ASC));
+        return reader;
+    }
+
+    @Bean
+    public ItemWriter<Book> jdbcItemWriter() {
+        JdbcBatchItemWriter<Book> writer = new JdbcBatchItemWriter<>();
+        writer.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>());
+        writer.setSql("INSERT INTO sys.books (title, author, publisher, cover_image_url, pages, height, width, thickness, category) " +
+                "VALUES (:title, :author, :publisher, :coverImageUrl, :pages, :height, :width, :thickness, :category)");
+        writer.setDataSource(mysqlDataSource);
+        return writer;
+    }
+
+    @Bean
+    @StepScope
     public MongoItemReader<Book> trBookReader(MongoTemplate mongoTemplate) {
         return new MongoItemReaderBuilder<Book>()
                 .name("trBookReader")
@@ -84,8 +120,4 @@ public class BatchConfig {
                 .targetType(Book.class)
                 .build();
     }
-//
-//    @Bean
-//    @StepScope
-//    public Item
 }
