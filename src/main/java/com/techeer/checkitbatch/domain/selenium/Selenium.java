@@ -2,6 +2,8 @@ package com.techeer.checkitbatch.domain.selenium;
 
 import com.techeer.checkitbatch.domain.book.entity.Book;
 import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
@@ -17,16 +19,17 @@ import java.util.List;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor(access = AccessLevel.PROTECTED)
+@RequiredArgsConstructor
 public class Selenium {
     private WebDriver driver;
     private final RedisTemplate<String, String> redisTemplate;
 
     private static final String url = "http://www.yes24.com/main/default.aspx";
+    private static final int CRAWLING_MAX_VALUE = 1000;
 
-//    private final BookMongoRepository bookRepository;
+    public static List<Book> crawledBookList = new ArrayList<>();
 
-    public void crawling() {
+    public List crawling() {
         log.info("*** 크롤링 시작 ***");
 
         System.setProperty("webdriver.chrome.driver", "/Users/misis1/myProject/Techeer-Book/checkitbatch/src/main/java/com/techeer/checkitbatch/crawling/chromedriver");
@@ -54,6 +57,7 @@ public class Selenium {
         driver.close();
         driver.quit();
         log.info("*** 크롤링 끝 ***");
+        return crawledBookList;
     }
 
     private void setting() throws InterruptedException {
@@ -88,9 +92,9 @@ public class Selenium {
             String url = aTag.getAttribute("href");
             urlList.add(url);
         }
-
         for(String url : urlList) {
             Thread.sleep(500);
+            if(crawledBookList.size() >= CRAWLING_MAX_VALUE) break;
             moveCategories(url);
         }
     }
@@ -112,6 +116,7 @@ public class Selenium {
                 urlList.add(subCateUrl);
             }
             for(String subUrl : urlList) {
+                if(crawledBookList.size() >= CRAWLING_MAX_VALUE) break;
                 moveCategories(subUrl);
             }
         }
@@ -126,6 +131,7 @@ public class Selenium {
 
             for(String bookUrl : bookUrlList) {
                 String isCrawled = (String) redisTemplate.opsForValue().get("id:"+bookUrl);
+                if(crawledBookList.size() >= CRAWLING_MAX_VALUE) break;
                 if(isCrawled != null && isCrawled.equals("crawled")) {
                     log.info("이미 크롤링 된 책입니다.");
                 }
@@ -198,6 +204,7 @@ public class Selenium {
                 log.info(thickness);
 
                 log.info(category);
+                crawledBookList.add(book);
 //            bookRepository.save(book);
 
 
