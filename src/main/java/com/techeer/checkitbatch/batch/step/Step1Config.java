@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 
+import java.util.HashMap;
 import java.util.List;
 
 @Slf4j
@@ -25,10 +26,10 @@ import java.util.List;
 public class Step1Config {
     private final StepBuilderFactory stepBuilderFactory;
     private final RedisTemplate<String, String> redisTemplate;
+    private final HashMap<String, String> crawlingMap;
 
     private final MongoTemplate mongoTemplate;
     private static final int chunkSize = 1000;
-//    private final ItemReader<Book> trBookReader;
 
 
     @Bean
@@ -45,7 +46,7 @@ public class Step1Config {
     @Bean
     @StepScope
     public ItemReader<Book> trBookReader() {
-        Selenium selenium = new Selenium(redisTemplate);
+        Selenium selenium = new Selenium(redisTemplate, crawlingMap);
         selenium.crawling();
         List<Book> list = Selenium.crawledBookList;
         return new ListItemReader<>(list);
@@ -53,12 +54,10 @@ public class Step1Config {
 
     public MongoItemWriter<Book> trBookWriter() {
         return new MongoItemWriterBuilder<Book>()
-                .collection("book")
+                .collection("newBook")
                 .template(mongoTemplate)
                 .build();
     }
-
-
 
     //    @Bean
 //    @StepScope

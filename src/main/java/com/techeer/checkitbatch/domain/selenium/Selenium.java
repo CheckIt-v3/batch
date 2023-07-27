@@ -1,9 +1,6 @@
 package com.techeer.checkitbatch.domain.selenium;
 
 import com.techeer.checkitbatch.domain.book.entity.Book;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
@@ -15,6 +12,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 @Slf4j
@@ -23,9 +21,11 @@ import java.util.List;
 public class Selenium {
     private WebDriver driver;
     private final RedisTemplate<String, String> redisTemplate;
+    private final HashMap<String, String> crawlingMap;
 
     private static final String url = "http://www.yes24.com/main/default.aspx";
     private static final int CRAWLING_MAX_VALUE = 1000;
+    private static final int CRAWLING_NEW_BOOK_VALUE = 100;
 
     public static List<Book> crawledBookList = new ArrayList<>();
 
@@ -50,6 +50,7 @@ public class Selenium {
         try {
             setting();
             getAnotherCategories();
+
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -67,7 +68,6 @@ public class Selenium {
 
         log.info("*** 광고 배너 제거 ***");
         try {
-//        driver.findElement(By.xpath("//*[@id=\"swrap\"]/div/div/div/div[2]/a[2]/em")).click();
             driver.findElement(By.xpath("//*[@id=\"chk_info\"]")).click();
 
         } catch (Exception e) {
@@ -75,15 +75,20 @@ public class Selenium {
             log.info("*** 광고 배너 제거 실패 ***");
         }
 
-        log.info("*** 국내 도서로 이동 ***");
-        WebElement koreanBooks = driver.findElement(By.xpath("//*[@id=\"ulCategoryList\"]/li[1]/a/em"));
+//        log.info("*** 국내 도서로 이동 ***");
+//        WebElement koreanBooks = driver.findElement(By.xpath("//*[@id=\"ulCategoryList\"]/li[1]/a/em"));
+
+        log.info("*** 신간 도서로 이동 ***");
+        WebElement koreanBooks = driver.findElement(By.xpath("//*[@id=\"yesFixCorner\"]/dl/dd/ul[1]/li[2]/a"));
         koreanBooks.click();
     }
 
+
+
     private void getAnotherCategories() throws InterruptedException {
         Thread.sleep(500);
-        WebElement categoryEle = driver.findElement(By.xpath("//*[@id=\"mCateLi\"]"));
-        List<WebElement> categories = categoryEle.findElements(By.className("cate2d"));
+        WebElement categoryEle = driver.findElement(By.xpath("//*[@id=\"category\"]/ul"));
+        List<WebElement> categories = categoryEle.findElements(By.tagName("li"));
 
         List<String> urlList = new ArrayList<>();
 
@@ -94,7 +99,8 @@ public class Selenium {
         }
         for(String url : urlList) {
             Thread.sleep(500);
-            if(crawledBookList.size() >= CRAWLING_MAX_VALUE) break;
+            if(crawledBookList.size() >= CRAWLING_NEW_BOOK_VALUE) break;
+            log.info(url);
             moveCategories(url);
         }
     }
@@ -103,45 +109,29 @@ public class Selenium {
         driver.get(url);
         Thread.sleep(500);
 
-        Boolean flag = driver.findElements(By.xpath("//*[@id=\"cateSubListWrap\"]")).size() > 0;
         List<String> urlList = new ArrayList<>();
 
-        // 서브 카테고리가 있으면
-        if (flag) {
-            WebElement subCategoriesEle  = driver.findElement(By.xpath("//*[@id=\"cateSubListWrap\"]"));
-            int size = subCategoriesEle.findElements(By.tagName("dl")).size();
-            for(int i = 1; i <= size; i++) {
-                WebElement subCategory = driver.findElement(By.xpath("//*[@id=\"cateSubListWrap\"]/dl["+ i +"]/dt/a"));
-                String subCateUrl = subCategory.getAttribute("href");
-                urlList.add(subCateUrl);
+        List<WebElement> bookList = driver.findElements(By.className("goodsTxtInfo"));
+        List<String> bookUrlList = new ArrayList<>();
+        for(WebElement book : bookList) {
+            WebElement aTag = book.findElement(By.tagName("a"));
+            String bookUrl = aTag.getAttribute("href");
+            bookUrlList.add(bookUrl);
+        }
+
+        for(String bookUrl : bookUrlList) {
+            String isCrawled = (String) redisTemplate.opsForValue().get("id:"+bookUrl);
+            log.info("현재까지 크롤링 된 책 갯수 : "+crawledBookList.size()+ " ******* ");
+            if(crawledBookList.size() >= CRAWLING_NEW_BOOK_VALUE) break;
+            if(isCrawled != null && isCrawled.equals("crawled") || crawlingMap.containsKey(bookUrl)) {
+                log.info("이미 크롤링 된 책입니다.");
             }
-            for(String subUrl : urlList) {
-                if(crawledBookList.size() >= CRAWLING_MAX_VALUE) break;
-                moveCategories(subUrl);
+            else {
+              crawlingMap.put(bookUrl, "crawled");
+              getInfo(bookUrl);
             }
         }
-        else {
-            List<WebElement> bookList = driver.findElements(By.className("imgBdr"));
-            List<String> bookUrlList = new ArrayList<>();
-            for(WebElement book : bookList) {
-                WebElement aTag = book.findElement(By.tagName("a"));
-                String bookUrl = aTag.getAttribute("href");
-                bookUrlList.add(bookUrl);
-            }
 
-            for(String bookUrl : bookUrlList) {
-                String isCrawled = (String) redisTemplate.opsForValue().get("id:"+bookUrl);
-                if(crawledBookList.size() >= CRAWLING_MAX_VALUE) break;
-                if(isCrawled != null && isCrawled.equals("crawled")) {
-                    log.info("이미 크롤링 된 책입니다.");
-                }
-                else {
-                    redisTemplate.opsForValue().set("id:" + bookUrl, "crawled");
-                    getInfo(bookUrl);
-                }
-            }
-
-        }
     }
 
     private void getInfo(String bookUrl) throws InterruptedException {
@@ -191,23 +181,17 @@ public class Selenium {
                     .category(category)
                     .build();
 
-                // list에 add 해주기
-
                 log.info(title);
-                log.info(author);
-                log.info(publisher);
-                log.info(coverImageUrl);
+//                log.info(author);
+//                log.info(publisher);
+//                log.info(coverImageUrl);
+//                log.info(pages);
+//                log.info(width);
+//                log.info(height);
+//                log.info(thickness);
+//                log.info(category);
 
-                log.info(pages);
-                log.info(width);
-                log.info(height);
-                log.info(thickness);
-
-                log.info(category);
                 crawledBookList.add(book);
-//            bookRepository.save(book);
-
-
 
         } catch (Exception e) {
             log.info(e.getMessage());
@@ -222,4 +206,72 @@ public class Selenium {
             driver.navigate().back();
         }
     }
+
+//    국내도서 크롤링 코드, 혹시 모르니 삭제 x
+//    private void getAnotherCategories() throws InterruptedException {
+//        Thread.sleep(500);
+//        WebElement categoryEle = driver.findElement(By.xpath("//*[@id=\"mCateLi\"]"));
+//        List<WebElement> categories = categoryEle.findElements(By.className("cate2d"));
+//
+//        List<String> urlList = new ArrayList<>();
+//
+//        for(WebElement category : categories) {
+//            WebElement aTag = category.findElement(By.tagName("a"));
+//            String url = aTag.getAttribute("href");
+//            urlList.add(url);
+//        }
+//        for(String url : urlList) {
+//            Thread.sleep(500);
+//            if(crawledBookList.size() >= CRAWLING_MAX_VALUE) break;
+//            moveCategories(url);
+//        }
+//    }
+//
+//    private void moveCategories(String url) throws InterruptedException {
+//        driver.get(url);
+//        Thread.sleep(500);
+//
+//        Boolean flag = driver.findElements(By.xpath("//*[@id=\"cateSubListWrap\"]")).size() > 0;
+//        List<String> urlList = new ArrayList<>();
+//
+//        // 서브 카테고리가 있으면
+//        if (flag) {
+//            WebElement subCategoriesEle  = driver.findElement(By.xpath("//*[@id=\"cateSubListWrap\"]"));
+//            int size = subCategoriesEle.findElements(By.tagName("dl")).size();
+//            for(int i = 1; i <= size; i++) {
+//                WebElement subCategory = driver.findElement(By.xpath("//*[@id=\"cateSubListWrap\"]/dl["+ i +"]/dt/a"));
+//                String subCateUrl = subCategory.getAttribute("href");
+//                urlList.add(subCateUrl);
+//            }
+//            for(String subUrl : urlList) {
+//                if(crawledBookList.size() >= CRAWLING_MAX_VALUE) break;
+//                moveCategories(subUrl);
+//            }
+//        }
+//        else {
+//            List<WebElement> bookList = driver.findElements(By.className("imgBdr"));
+//            List<String> bookUrlList = new ArrayList<>();
+//            for(WebElement book : bookList) {
+//                WebElement aTag = book.findElement(By.tagName("a"));
+//                String bookUrl = aTag.getAttribute("href");
+//                bookUrlList.add(bookUrl);
+//            }
+//
+//            for(String bookUrl : bookUrlList) {
+//                String isCrawled = (String) redisTemplate.opsForValue().get("id:"+bookUrl);
+//                if(crawledBookList.size() >= CRAWLING_MAX_VALUE) break;
+//                if(isCrawled != null && isCrawled.equals("crawled") || crawlingMap.containsKey(bookUrl)) {
+//                    log.info("이미 크롤링 된 책입니다.");
+//                }
+//                else {
+//
+////                    redisTemplate.opsForValue().set("id:" + bookUrl, "crawled");
+//                    crawlingMap.put(bookUrl, "crawled");
+//                    getInfo(bookUrl);
+//                }
+//            }
+//
+//        }
+//    }
+
 }
