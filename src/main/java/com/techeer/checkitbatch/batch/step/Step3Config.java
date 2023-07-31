@@ -2,6 +2,7 @@ package com.techeer.checkitbatch.batch.step;
 
 import com.techeer.checkitbatch.batch.CustomMongoItemReader;
 import com.techeer.checkitbatch.domain.book.entity.Book;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobScope;
@@ -16,12 +17,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 
 import javax.sql.DataSource;
 import java.util.Collections;
 
 @Slf4j
 @Configuration
+@RequiredArgsConstructor
 public class Step3Config {
     private final StepBuilderFactory stepBuilderFactory;
     private final MongoTemplate mongoTemplate;
@@ -29,13 +33,7 @@ public class Step3Config {
     @Qualifier("mysqlDataSource")
     private final DataSource mysqlDataSource;
 
-    private static final int chunkSize = 4;
-
-    public Step3Config(StepBuilderFactory stepBuilderFactory, MongoTemplate mongoTemplate, DataSource mysqlDataSource) {
-        this.stepBuilderFactory = stepBuilderFactory;
-        this.mongoTemplate = mongoTemplate;
-        this.mysqlDataSource = mysqlDataSource;
-    }
+    private static final int chunkSize = 100;
 
     @Bean
     @JobScope
@@ -51,7 +49,9 @@ public class Step3Config {
     @StepScope
     public CustomMongoItemReader<Book> mongoDBItemReader() {
         CustomMongoItemReader<Book> reader = new CustomMongoItemReader<>(mongoTemplate, "newBook", Book.class);
-        reader.setQuery("{}");
+        Query query = new Query();
+        query.addCriteria(Criteria.where("title").exists(true));
+        reader.setQuery(query);
         reader.setSort(Collections.singletonMap("created_at", Sort.Direction.ASC));
         return reader;
     }
@@ -60,8 +60,8 @@ public class Step3Config {
     public ItemWriter<Book> jdbcItemWriter() {
         JdbcBatchItemWriter<Book> writer = new JdbcBatchItemWriter<>();
         writer.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>());
-        writer.setSql("INSERT INTO sys.books (title, author, publisher, cover_image_url, pages, height, width, thickness, category) " +
-                "VALUES (:title, :author, :publisher, :coverImageUrl, :pages, :height, :width, :thickness, :category)");
+        writer.setSql("INSERT INTO sys.books (title, author, publisher, cover_image_url, pages, height, width, thickness, category, is_deleted) " +
+                "VALUES (:title, :author, :publisher, :coverImageUrl, :pages, :height, :width, :thickness, :category, false)");
         writer.setDataSource(mysqlDataSource);
         return writer;
     }
