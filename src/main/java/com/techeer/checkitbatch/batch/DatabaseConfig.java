@@ -14,6 +14,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
 
 import javax.sql.DataSource;
+import java.util.HashMap;
 
 @Configuration
 public class DatabaseConfig extends DefaultBatchConfigurer {
@@ -50,5 +51,10 @@ public class DatabaseConfig extends DefaultBatchConfigurer {
         DataSourceBuilder builder = DataSourceBuilder.create();
         builder.type(HikariDataSource.class);
         return builder.build();
+    }
+
+    @Bean
+    public HashMap<String, String> crawlingMap() {
+        return new HashMap<>();
     }
 }
