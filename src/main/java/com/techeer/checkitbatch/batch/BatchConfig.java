@@ -1,10 +1,6 @@
 package com.techeer.checkitbatch.batch;
 
-import com.techeer.checkitbatch.batch.step.Step1Config;
-//import com.techeer.checkitbatch.batch.step.Step3Config;
-import com.techeer.checkitbatch.batch.step.Step3Config;
-import com.techeer.checkitbatch.batch.step.Step5Config;
-import com.techeer.checkitbatch.batch.step.Step6Config;
+import com.techeer.checkitbatch.batch.step.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -23,6 +19,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class BatchConfig {
     private final JobBuilderFactory jobBuilderFactory;
     private final Step1Config step1Config;
+    private final Step3Config step3Config;
+    private final Step4Config step4Config;
     private final Step5Config step5Config;
     private final Step6Config step6Config;
 
@@ -31,10 +29,10 @@ public class BatchConfig {
     public Job job(){
         return jobBuilderFactory.get("Crawling Data Insert DB")
             .start(step1Config.crawling()) // 크롤링
+                .next(step3Config.mongodbToMySQLStep())
+                .next(step4Config.moveDataStep())
                 .next(step5Config.dropNewBook())
                 .next(step6Config.setRedisKey()) // redis에 key 저장
                 .build();
     }
-
-
 }
