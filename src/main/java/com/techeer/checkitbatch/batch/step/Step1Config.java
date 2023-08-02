@@ -59,19 +59,4 @@ public class Step1Config {
                 .build();
     }
 
-    //    @Bean
-//    @StepScope
-//    public MongoItemReader<Book> trBookReader(MongoTemplate mongoTemplate) {
-//        return new MongoItemReaderBuilder<Book>()
-//            .name("trBookReader")
-//            .targetType(Book.class)
-//            .jsonQuery("{}")
-//            .collection("book")
-//            .pageSize(chunkSize)
-//            .sorts(Collections.singletonMap("created_at", Sort.Direction.ASC))
-//            .template(mongoTemplate)
-//            .targetType(Book.class)
-//            .build();
-//    }
-
 }

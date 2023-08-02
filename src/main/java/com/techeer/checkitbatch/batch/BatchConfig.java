@@ -2,6 +2,7 @@ package com.techeer.checkitbatch.batch;
 
 import com.techeer.checkitbatch.batch.step.Step1Config;
 //import com.techeer.checkitbatch.batch.step.Step3Config;
+import com.techeer.checkitbatch.batch.step.Step3Config;
 import com.techeer.checkitbatch.batch.step.Step5Config;
 import com.techeer.checkitbatch.batch.step.Step6Config;
 import lombok.RequiredArgsConstructor;
@@ -25,13 +26,11 @@ public class BatchConfig {
     private final Step5Config step5Config;
     private final Step6Config step6Config;
 
-//    private final Step3Config step3Config;
 
     @Bean
     public Job job(){
         return jobBuilderFactory.get("Crawling Data Insert DB")
             .start(step1Config.crawling()) // 크롤링
-//            .next(step3Config.mongodbToMySQLStep())
                 .next(step5Config.dropNewBook())
                 .next(step6Config.setRedisKey()) // redis에 key 저장
                 .build();
