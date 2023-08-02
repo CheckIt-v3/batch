@@ -2,6 +2,7 @@ package com.techeer.checkitbatch.batch;
 
 import com.techeer.checkitbatch.batch.step.Step1Config;
 import com.techeer.checkitbatch.batch.step.Step3Config;
+import com.techeer.checkitbatch.batch.step.Step4Config;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -19,6 +20,8 @@ public class BatchConfig {
     private final JobBuilderFactory jobBuilderFactory;
     private final Step1Config step1Config;
     private final Step3Config step3Config;
+    private final Step4Config step4Config;
+
 
     @Bean
     public Job job(){
@@ -26,6 +29,7 @@ public class BatchConfig {
             .start(step1Config.crawling())
             //.next() 몽고디비에 크롤링 데이터 저장
             .next(step3Config.mongodbToMySQLStep())
+            .next(step4Config.moveDataStep())
             .build();
     }
 }
