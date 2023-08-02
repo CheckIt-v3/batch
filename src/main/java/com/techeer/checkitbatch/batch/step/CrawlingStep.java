@@ -23,7 +23,7 @@ import java.util.List;
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-public class Step1Config {
+public class CrawlingStep {
     private final StepBuilderFactory stepBuilderFactory;
     private final RedisTemplate<String, String> redisTemplate;
     private final HashMap<String, String> crawlingMap;

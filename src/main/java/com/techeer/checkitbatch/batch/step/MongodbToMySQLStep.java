@@ -8,8 +8,11 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.item.data.MongoItemWriter;
-import org.springframework.batch.item.data.builder.MongoItemWriterBuilder;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
+import org.springframework.batch.item.database.JdbcBatchItemWriter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Sort;
@@ -17,28 +20,34 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 
+import javax.sql.DataSource;
 import java.util.Collections;
 
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-public class Step4Config {
+public class MongodbToMySQLStep {
     private final StepBuilderFactory stepBuilderFactory;
     private final MongoTemplate mongoTemplate;
+    @Autowired
+    @Qualifier("mysqlDataSource")
+    private final DataSource mysqlDataSource;
+
+    private static final int chunkSize = 100;
 
     @Bean
     @JobScope
-    public Step moveDataStep() {
-        return stepBuilderFactory.get("moveDataStep")
-                .<Book, Book>chunk(100)
-                .reader(mongoItemReader())
-                .writer(mongoItemWriter())
-                .build();
+    public Step mongodbToMySQL() {
+        return stepBuilderFactory.get("mongoDBToMySQL")
+            .<Book, Book>chunk(chunkSize)
+            .reader(mongoDBItemReader())
+            .writer(jdbcItemWriter())
+            .build();
     }
 
     @Bean
     @StepScope
-    public CustomMongoItemReader<Book> mongoItemReader() {
+    public CustomMongoItemReader<Book> mongoDBItemReader() {
         CustomMongoItemReader<Book> reader = new CustomMongoItemReader<>(mongoTemplate, "newBook", Book.class);
         Query query = new Query();
         query.addCriteria(Criteria.where("title").exists(true));
@@ -48,10 +57,12 @@ public class Step4Config {
     }
 
     @Bean
-    public MongoItemWriter<Book> mongoItemWriter() {
-        return new MongoItemWriterBuilder<Book>()
-                .template(mongoTemplate)
-                .collection("book")
-                .build();
+    public ItemWriter<Book> jdbcItemWriter() {
+        JdbcBatchItemWriter<Book> writer = new JdbcBatchItemWriter<>();
+        writer.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>());
+        writer.setSql("INSERT INTO sys.books (title, author, publisher, cover_image_url, pages, height, width, thickness, category, is_deleted) " +
+                "VALUES (:title, :author, :publisher, :coverImageUrl, :pages, :height, :width, :thickness, :category, false)");
+        writer.setDataSource(mysqlDataSource);
+        return writer;
     }
 }

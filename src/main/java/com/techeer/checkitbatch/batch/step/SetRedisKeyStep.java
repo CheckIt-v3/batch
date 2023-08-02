@@ -12,33 +12,40 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
+
+import java.util.HashMap;
 
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-public class Step5Config {
+public class SetRedisKeyStep {
     private final StepBuilderFactory stepBuilderFactory;
-    private final MongoTemplate mongoTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
+    private final HashMap<String, String> crawlingMap;
 
     @Bean
     @JobScope
-    public Step dropNewBook() {
-        return stepBuilderFactory.get("dropNewBook")
+    public Step setRedisKey() {
+        return stepBuilderFactory.get("setRedisKey")
                 .allowStartIfComplete(true)
-                .tasklet(drop())
+                .tasklet(setKeyToRedis())
                 .build();
     }
 
     @Bean
     @StepScope
-    public Tasklet drop() {
+    public Tasklet setKeyToRedis() {
         return new Tasklet() {
             @Override
             public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
-                mongoTemplate.dropCollection("newBook");
+                for (String key : crawlingMap.keySet()) {
+                    redisTemplate.opsForValue().set("id:" + key, "crawled");
+                }
+                log.info("redis key 설정 완료");
                 return RepeatStatus.FINISHED;
             }
         };
     }
+
 }
