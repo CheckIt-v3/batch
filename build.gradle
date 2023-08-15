@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '2.7.13'
 	id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+	id 'com.google.cloud.tools.jib' version '3.2.1'
 }
 
 group = 'com.techeer'
@@ -29,7 +30,6 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 	//selenium 라이브러리
 	implementation 'org.seleniumhq.selenium:selenium-java:4.10.0'
-	implementation 'org.seleniumhq.selenium:selenium-devtools-v86:4.0.0-alpha-7'
 	// redis
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	compileOnly 'org.projectlombok:lombok'
@@ -50,7 +50,36 @@ tasks.named("bootBuildImage") { // ./gradlew bootBuildImage 시 docker hub로 �
 	docker {
 		publishRegistry {
 			username = project.DOCKER_ID
-			password = project.DOCKER_PW
+			password = project.DOCKER_PASSWORD
 		}
 	}
+
+}
+
+jib {
+	from {
+		image = "openjdk:11-jre-slim"
+		auth {
+			username = project.DOCKER_ID
+			password = project.DOCKER_PASSWORD
+		}
+	}
+	to {
+		image = project.DOCKER_ID + "/" + project.DOCKER_IMAGE_NAME
+		auth {
+			username = project.DOCKER_ID
+			password = project.DOCKER_PASSWORD
+		}
+		tags = ["latest"]
+	}
+	container {
+		jvmFlags = ["-Xms128m", "-Xmx128m"]
+	}
+//	extraDirectories {
+//		paths {
+//			path {
+//				from = file('src/main/jib/crawling')
+//			}
+//		}
+//	}
 }
