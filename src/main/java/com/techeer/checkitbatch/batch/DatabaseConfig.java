@@ -18,19 +18,9 @@ import java.util.HashMap;
 
 @Configuration
 public class DatabaseConfig extends DefaultBatchConfigurer {
-    @Bean
-    @Primary
-    @ConfigurationProperties("spring.datasource-h2")
-    DataSource springBatchDb(){
-        DataSourceBuilder builder = DataSourceBuilder.create();
-        builder.type(HikariDataSource.class);
-        return builder.build();
-    }
-
     @Override
-    public void setDataSource(@Qualifier("h2Datasource") DataSource dataSource)
+    public void setDataSource(@Qualifier("mysqlDataSource") DataSource dataSource)
     {
-        // H2 datasource를 batch 기본 datasource로 설정해줍니다.
         super.setDataSource(dataSource);
     }
 
@@ -45,6 +35,7 @@ public class DatabaseConfig extends DefaultBatchConfigurer {
 
     @Bean
     @Qualifier("mysqlDataSource")
+    @Primary
     @BatchDataSource
     @ConfigurationProperties("spring.datasource-mysql")
     DataSource mysqlDb(){

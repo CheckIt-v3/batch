@@ -4,7 +4,6 @@ import com.techeer.checkitbatch.domain.book.entity.Book;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -19,7 +18,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class Selenium {
-    private WebDriver driver;
+    private ChromeDriver driver;
     private final RedisTemplate<String, String> redisTemplate;
     private final HashMap<String, String> crawlingMap;
 
@@ -32,13 +31,13 @@ public class Selenium {
     public List crawling() {
         log.info("*** 크롤링 시작 ***");
 
-        System.setProperty("webdriver.chrome.driver", "/Users/misis1/myProject/Techeer-Book/checkitbatch/src/main/java/com/techeer/checkitbatch/crawling/chromedriver");
-        //크롬 드라이버 셋팅 (드라이버 설치한 경로 입력)
+//        System.setProperty("webdriver.chrome.driver", "/Users/misis1/myProject/Techeer-Book/checkitbatch/src/main/java/com/techeer/checkitbatch/crawling/chromedriver");
+        System.setProperty("webdriver.chrome.driver", "/usr/bin/chromedriver");
 
         ChromeOptions chromeOptions = new ChromeOptions();
         // websocket 허용
         chromeOptions.addArguments("--remote-allow-origins=*");
-//        chromeOptions.setHeadless(true);
+        chromeOptions.setHeadless(true);
         chromeOptions.addArguments("--lang=ko");
         chromeOptions.addArguments("--no-sandbox");
         chromeOptions.addArguments("--disable-dev-shm-usage");
@@ -46,18 +45,20 @@ public class Selenium {
         chromeOptions.setCapability("ignoreProtectedModeSettings", true);
 
         driver = new ChromeDriver(chromeOptions);
+        log.info("크롬 버전 : " + driver.getCapabilities().getCapability("chrome").toString());
+        log.info("드라이버 버전 : "+driver.getCapabilities().getBrowserVersion());
 
         try {
             setting();
             getAnotherCategories();
-
+            log.info("크롤링 끝");
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
         driver.close();
         driver.quit();
-        log.info("*** 크롤링 끝 ***");
+        log.info("*** 크롬 드라이버 종료 ***");
         return crawledBookList;
     }
 

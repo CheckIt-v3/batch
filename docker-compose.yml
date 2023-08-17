@@ -2,21 +2,9 @@ version: "3"
 services:
   backend:
     container_name: checkit-batch
+    build: ./
     image: jiminsong/checkitbatch:latest
+    platform: linux/amd64
     ports:
-      - "8080:8080"
-    depends_on:
-      - redis
+      - "8082:8082"
 
-  redis:
-    container_name: checkit-redis
-    image: redis:latest
-    ports:
-      - 6379:6379
-    volumes:
-      - ./redis/data:/data
-    labels:
-      - "name=redis"
-      - "mode=standalone"
-    restart: always
-    command: redis-server
