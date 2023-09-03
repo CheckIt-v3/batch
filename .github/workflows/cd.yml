@@ -28,6 +28,12 @@ jobs: # Job
           echo "${{ secrets.GRADLE_PROPERTIES }}" >> gradle.properties
           cat gradle.properties
 
+      # application.properties 생성
+      - name : Setting application.properties
+        run: |
+          echo "${{ secrets.APPLICATION }}" >> ./src/main/resources/application.properties
+          cat ./src/main/resources/application.properties
+
       # 도커 허브 사용을 위해 도커에 로그인
       - name: Login to DockerHub
         uses: docker/login-action@v1
