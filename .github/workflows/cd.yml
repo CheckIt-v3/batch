@@ -31,6 +31,7 @@ jobs: # Job
       # application.properties 생성
       - name : Setting application.properties
         run: |
+          mkdir ./src/main/resources
           echo "${{ secrets.APPLICATION }}" >> ./src/main/resources/application.properties
 
       # 도커 허브 사용을 위해 도커에 로그인
