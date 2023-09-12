@@ -1,13 +1,12 @@
 package com.techeer.checkitbatch.domain.book.entity;
 
-import com.techeer.checkitbatch.global.entity.BaseEntity;
 import lombok.*;
 
-import javax.persistence.*;
+import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Book extends BaseEntity {
+public class Book {
     private String id;
     private Long mySqlId;
     private String title;
@@ -19,9 +18,10 @@ public class Book extends BaseEntity {
     private int width;
     private int thickness;
     private String category;
+    private LocalDateTime createdAt;
 
     @Builder
-    public Book(String title, String author, String publisher, String coverImageUrl, int pages, int height, int width, int thickness, String category) {
+    public Book(String title, String author, String publisher, String coverImageUrl, int pages, int height, int width, int thickness, String category, LocalDateTime createdAt) {
         this.title = title;
         this.author = author;
         this.publisher = publisher;
@@ -31,5 +31,6 @@ public class Book extends BaseEntity {
         this.width = width;
         this.thickness = thickness;
         this.category = category;
+        this.createdAt = createdAt;
     }
 }

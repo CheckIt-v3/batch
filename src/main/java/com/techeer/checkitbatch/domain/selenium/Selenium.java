@@ -10,6 +10,7 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -170,6 +171,8 @@ public class Selenium {
 
             String category = driver.findElement(By.xpath("//*[@id=\"infoset_goodsCate\"]/div[2]/dl[1]/dd/ul")).getText();
 
+            LocalDateTime createdAt = LocalDateTime.now();
+
             Book book = Book.builder()
                     .title(title)
                     .author(author)
@@ -180,6 +183,7 @@ public class Selenium {
                     .height(Integer.parseInt(height))
                     .thickness(Integer.parseInt(thickness))
                     .category(category)
+                    .createdAt(createdAt)
                     .build();
 
                 log.info(title);

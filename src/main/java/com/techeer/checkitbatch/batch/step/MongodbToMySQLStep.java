@@ -60,8 +60,8 @@ public class MongodbToMySQLStep {
     public ItemWriter<Book> jdbcItemWriter() {
         JdbcBatchItemWriter<Book> writer = new JdbcBatchItemWriter<>();
         writer.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>());
-        writer.setSql("INSERT INTO sys.books (title, author, publisher, cover_image_url, pages, height, width, thickness, category, is_deleted) " +
-                "VALUES (:title, :author, :publisher, :coverImageUrl, :pages, :height, :width, :thickness, :category, false)");
+        writer.setSql("INSERT INTO sys.books (title, author, publisher, cover_image_url, pages, height, width, thickness, category, is_deleted, created_at) " +
+                "VALUES (:title, :author, :publisher, :coverImageUrl, :pages, :height, :width, :thickness, :category, false, :createdAt)");
         writer.setDataSource(mysqlDataSource);
         return writer;
     }
