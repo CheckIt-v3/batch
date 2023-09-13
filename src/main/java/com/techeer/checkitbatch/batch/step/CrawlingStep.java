@@ -51,12 +51,12 @@ public class CrawlingStep {
         List<Book> list = Selenium.crawledBookList;
         return new ListItemReader<>(list);
     }
-
+    @Bean
+    @StepScope
     public MongoItemWriter<Book> trBookWriter() {
         return new MongoItemWriterBuilder<Book>()
                 .collection("newBook")
                 .template(mongoTemplate)
                 .build();
     }
-
 }

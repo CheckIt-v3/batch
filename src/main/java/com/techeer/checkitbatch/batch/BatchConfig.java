@@ -28,8 +28,8 @@ public class BatchConfig {
     @Bean
     public Job job(){
         return jobBuilderFactory.get("Crawling Data Insert DB")
-            .start(crawlingStep.crawling()) // 크롤링
-                .next(mongodbToMySQLStep.mongodbToMySQL())
+            .start(crawlingStep.crawling()) // 크롤링, MongoDB에 저장
+                .next(mongodbToMySQLStep.mongodbToMySQL()) // MongoDB -> MySQL
                 .next(moveDataStep.moveData())
                 .next(dropNewBookStep.dropNewBook())
                 .next(setRedisKeyStep.setRedisKey()) // redis에 key 저장

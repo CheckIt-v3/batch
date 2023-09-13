@@ -19,6 +19,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
 import javax.sql.DataSource;
 import java.util.Collections;
@@ -32,7 +33,6 @@ public class MongodbToMySQLStep {
     @Autowired
     @Qualifier("mysqlDataSource")
     private final DataSource mysqlDataSource;
-
     private static final int chunkSize = 100;
 
     @Bean
@@ -42,6 +42,7 @@ public class MongodbToMySQLStep {
             .<Book, Book>chunk(chunkSize)
             .reader(mongoDBItemReader())
             .writer(jdbcItemWriter())
+                .transactionManager(mysqlTransactionManager(mysqlDataSource))
             .build();
     }
 
@@ -57,6 +58,7 @@ public class MongodbToMySQLStep {
     }
 
     @Bean
+    @StepScope
     public ItemWriter<Book> jdbcItemWriter() {
         JdbcBatchItemWriter<Book> writer = new JdbcBatchItemWriter<>();
         writer.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>());
@@ -65,4 +67,9 @@ public class MongodbToMySQLStep {
         writer.setDataSource(mysqlDataSource);
         return writer;
     }
+
+    public DataSourceTransactionManager mysqlTransactionManager(DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
+    }
+
 }
