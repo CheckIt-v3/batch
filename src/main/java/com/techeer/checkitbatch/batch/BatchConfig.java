@@ -19,9 +19,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class BatchConfig {
     private final JobBuilderFactory jobBuilderFactory;
     private final CrawlingStep crawlingStep;
-    private final DropNewBookStep dropNewBookStep;
-    private final MongodbToMySQLStep mongodbToMySQLStep;
-    private final MoveDataStep moveDataStep;
+//    private final DropNewBookStep dropNewBookStep;
+//    private final SeleniumToMySQL seleniumToMySQL;
+//    private final MoveDataStep moveDataStep;
     private final SetRedisKeyStep setRedisKeyStep;
 
 
@@ -29,9 +29,9 @@ public class BatchConfig {
     public Job job(){
         return jobBuilderFactory.get("Crawling Data Insert DB")
             .start(crawlingStep.crawling()) // 크롤링
-                .next(mongodbToMySQLStep.mongodbToMySQL())
-                .next(moveDataStep.moveData())
-                .next(dropNewBookStep.dropNewBook())
+//                .next(seleniumToMySQL.seleniumToMySQL())
+//                .next(moveDataStep.moveData())
+//                .next(dropNewBookStep.dropNewBook())
                 .next(setRedisKeyStep.setRedisKey()) // redis에 key 저장
                 .build();
     }

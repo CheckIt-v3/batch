@@ -10,8 +10,8 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
+//import org.springframework.data.mongodb.core.MongoTemplate;
+//import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
 
 import javax.sql.DataSource;
 import java.util.HashMap;
@@ -25,13 +25,13 @@ public class DatabaseConfig extends DefaultBatchConfigurer {
     }
 
 
-    @Value("${spring.data.mongodb.uri}")
-    private String mongoUri;
-    @Bean
-    public MongoTemplate mongoDb() {
-        SimpleMongoClientDatabaseFactory databaseFactory = new SimpleMongoClientDatabaseFactory(mongoUri);
-        return new MongoTemplate(databaseFactory);
-    }
+//    @Value("${spring.data.mongodb.uri}")
+//    private String mongoUri;
+//    @Bean
+//    public MongoTemplate mongoDb() {
+//        SimpleMongoClientDatabaseFactory databaseFactory = new SimpleMongoClientDatabaseFactory(mongoUri);
+//        return new MongoTemplate(databaseFactory);
+//    }
 
     @Bean
     @Qualifier("mysqlDataSource")

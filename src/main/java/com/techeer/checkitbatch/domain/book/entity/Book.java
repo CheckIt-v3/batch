@@ -1,14 +1,17 @@
 package com.techeer.checkitbatch.domain.book.entity;
 
 import lombok.*;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 
+import javax.persistence.Id;
 import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Book {
+    @Id
+
     private String id;
-    private Long mySqlId;
     private String title;
     private String author;
     private String publisher;

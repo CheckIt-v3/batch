@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Slf4j
 @Service
@@ -25,15 +26,13 @@ public class Selenium {
 
     private static final String url = "http://www.yes24.com/main/default.aspx";
     private static final int CRAWLING_MAX_VALUE = 1000;
-    private static final int CRAWLING_NEW_BOOK_VALUE = 100;
+    private static final int CRAWLING_NEW_BOOK_VALUE = 10;
 
     public static List<Book> crawledBookList = new ArrayList<>();
 
-    public List crawling() {
+    public List bookCrawling() {
         log.info("*** 크롤링 시작 ***");
-
-//        System.setProperty("webdriver.chrome.driver", "/Users/misis1/myProject/Techeer-Book/checkitbatch/src/main/java/com/techeer/checkitbatch/crawling/chromedriver");
-        System.setProperty("webdriver.chrome.driver", "/usr/bin/chromedriver");
+        System.setProperty("webdriver.chrome.driver", "/usr/bin/chromedriver"); // 도커 chromedriver 실행할 때
 
         ChromeOptions chromeOptions = new ChromeOptions();
         // websocket 허용
@@ -47,11 +46,12 @@ public class Selenium {
 
         driver = new ChromeDriver(chromeOptions);
         log.info("크롬 버전 : " + driver.getCapabilities().getCapability("chrome").toString());
-        log.info("드라이버 버전 : "+driver.getCapabilities().getBrowserVersion());
+        log.info("드라이버 버전 : "+ driver.getCapabilities().getBrowserVersion());
 
         try {
             setting();
-            getAnotherCategories();
+//            getAnotherCategories();
+            getBestSellerBooks();
             log.info("크롤링 끝");
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -80,60 +80,105 @@ public class Selenium {
 //        log.info("*** 국내 도서로 이동 ***");
 //        WebElement koreanBooks = driver.findElement(By.xpath("//*[@id=\"ulCategoryList\"]/li[1]/a/em"));
 
-        log.info("*** 신간 도서로 이동 ***");
-        WebElement koreanBooks = driver.findElement(By.xpath("//*[@id=\"yesFixCorner\"]/dl/dd/ul[1]/li[2]/a"));
+//        log.info("*** 신간 도서로 이동 ***");
+//        WebElement koreanBooks = driver.findElement(By.xpath("//*[@id=\"yesFixCorner\"]/dl/dd/ul[1]/li[2]/a"));
+        log.info("*** 베스트 도서로 이동 ***");
+        WebElement koreanBooks = driver.findElement(By.xpath("//*[@id=\"yesFixCorner\"]/dl/dd/ul[1]/li[1]/a"));
         koreanBooks.click();
     }
 
+    private void getBestSellerBooks() throws InterruptedException {
+        boolean hasNextPageGroup = true;
 
+        while (hasNextPageGroup) {
+            // 현재 페이지 그룹의 모든 페이지 순회
+            while (true) {
+                // 현재 페이지에서 데이터 크롤링
+                crawlCurrentPage();
 
-    private void getAnotherCategories() throws InterruptedException {
-        Thread.sleep(500);
-        WebElement categoryEle = driver.findElement(By.xpath("//*[@id=\"category\"]/ul"));
-        List<WebElement> categories = categoryEle.findElements(By.tagName("li"));
+                // 다음 페이지로 이동
+                if (!goToNextPage()) {
+                    break; // 다음 페이지가 없으면 페이지 그룹 종료
+                }
 
-        List<String> urlList = new ArrayList<>();
+                if (crawledBookList.size() >= CRAWLING_NEW_BOOK_VALUE) {
+                    log.info("크롤링 최대 값에 도달했습니다. 작업을 종료합니다.");
+                    return;
+                }
+            }
 
-        for(WebElement category : categories) {
-            WebElement aTag = category.findElement(By.tagName("a"));
-            String url = aTag.getAttribute("href");
-            urlList.add(url);
-        }
-        for(String url : urlList) {
-            Thread.sleep(500);
-            if(crawledBookList.size() >= CRAWLING_NEW_BOOK_VALUE) break;
-            log.info(url);
-            moveCategories(url);
+            // 다음 페이지 그룹으로 이동
+            hasNextPageGroup = goToNextPageGroup();
+            if (!hasNextPageGroup) {
+                log.info("베스트셀러 전체를 크롤링 완료하였습니다."); // 페이지 그룹이 끝난 경우 로그 출력
+            }
         }
     }
 
-    private void moveCategories(String url) throws InterruptedException {
-        driver.get(url);
+    private void crawlCurrentPage() throws InterruptedException {
         Thread.sleep(500);
 
-        List<String> urlList = new ArrayList<>();
+        List<WebElement> bookList = driver.findElements(By.xpath("//*[@id='yesBestList']/li"));
+        for (WebElement book : bookList) {
+            try {
+                WebElement aTag = book.findElement(By.xpath(".//span[@class='img_grp']/a"));
+                String bookUrl = aTag.getAttribute("href");
 
-        List<WebElement> bookList = driver.findElements(By.className("goodsTxtInfo"));
-        List<String> bookUrlList = new ArrayList<>();
-        for(WebElement book : bookList) {
-            WebElement aTag = book.findElement(By.tagName("a"));
-            String bookUrl = aTag.getAttribute("href");
-            bookUrlList.add(bookUrl);
-        }
+                // 중복확인
+                if (!isAlreadyCrawled(bookUrl)) {
+                    getInfo(bookUrl);
+                }
 
-        for(String bookUrl : bookUrlList) {
-            String isCrawled = (String) redisTemplate.opsForValue().get("id:"+bookUrl);
-            log.info("현재까지 크롤링 된 책 갯수 : "+crawledBookList.size()+ " ******* ");
-            if(crawledBookList.size() >= CRAWLING_NEW_BOOK_VALUE) break;
-            if(isCrawled != null && isCrawled.equals("crawled") || crawlingMap.containsKey(bookUrl)) {
-                log.info("이미 크롤링 된 책입니다.");
-            }
-            else {
-              crawlingMap.put(bookUrl, "crawled");
-              getInfo(bookUrl);
+                if (crawledBookList.size() >= CRAWLING_NEW_BOOK_VALUE) {
+                    log.info("크롤링 최대 값에 도달했습니다.");
+                    return;
+                }
+            } catch (Exception e) {
+                log.error("책 크롤링 중 오류 발생", e);
             }
         }
+    }
 
+    private boolean goToNextPage() {
+        try {
+            WebElement nextPage = driver.findElement(By.xpath("//a[@class='num']"));
+            if (nextPage != null && nextPage.isDisplayed()) {
+                nextPage.click();
+                Thread.sleep(1000); // 페이지 로드 대기
+                return true;
+            }
+        } catch (NoSuchElementException e) {
+            log.info("다음 페이지 버튼을 찾을 수 없습니다. 페이지 그룹 종료.");
+        } catch (Exception e) {
+            log.warn("다음 페이지 이동 중 오류 발생: {}", e.getMessage());
+        }
+        return false;
+    }
+
+    private boolean goToNextPageGroup() {
+        try {
+            WebElement nextPageGroup = driver.findElement(By.xpath("//a[@class='bgYUI next']"));
+            if (nextPageGroup != null && nextPageGroup.isDisplayed()) {
+                nextPageGroup.click();
+                Thread.sleep(1000); // 페이지 로드 대기
+                return true;
+            }
+        } catch (NoSuchElementException e) {
+            log.info("다음 페이지 그룹 버튼을 찾을 수 없습니다. 작업 종료.");
+        } catch (Exception e) {
+            log.warn("다음 페이지 그룹 이동 중 오류 발생: {}", e.getMessage());
+        }
+        return false;
+    }
+
+    private boolean isAlreadyCrawled(String bookUrl) {
+        String isCrawled = redisTemplate.opsForValue().get("id:" + bookUrl);
+        if (isCrawled != null && isCrawled.equals("crawled")) {
+            log.info("이미 크롤링된 책: {}", bookUrl);
+            return true;
+        }
+        crawlingMap.put(bookUrl, "crawled");
+        return false;
     }
 
     private void getInfo(String bookUrl) throws InterruptedException {
@@ -187,20 +232,12 @@ public class Selenium {
                     .build();
 
                 log.info(title);
-//                log.info(author);
-//                log.info(publisher);
-//                log.info(coverImageUrl);
-//                log.info(pages);
-//                log.info(width);
-//                log.info(height);
-//                log.info(thickness);
-//                log.info(category);
 
                 crawledBookList.add(book);
 
         } catch (Exception e) {
             log.info(e.getMessage());
-            log.info("크롤링 또는 mongodb에 저장 실패");
+            log.info("크롤링 또는 mysql 저장 실패");
         }
 
         try {
@@ -211,6 +248,55 @@ public class Selenium {
             driver.navigate().back();
         }
     }
+    // 신간 도서
+//    private void getAnotherCategories() throws InterruptedException {
+//        Thread.sleep(500);
+//        WebElement categoryEle = driver.findElement(By.xpath("//*[@id=\"category\"]/ul"));
+//        List<WebElement> categories = categoryEle.findElements(By.tagName("li"));
+//
+//        List<String> urlList = new ArrayList<>();
+//
+//        for(WebElement category : categories) {
+//            WebElement aTag = category.findElement(By.tagName("a"));
+//            String url = aTag.getAttribute("href");
+//            urlList.add(url);
+//        }
+//        for(String url : urlList) {
+//            Thread.sleep(500);
+//            if(crawledBookList.size() >= CRAWLING_NEW_BOOK_VALUE) break;
+//            log.info(url);
+//            moveCategories(url);
+//        }
+//    }
+//
+//    private void moveCategories(String url) throws InterruptedException {
+//        driver.get(url);
+//        Thread.sleep(500);
+//
+//        List<String> urlList = new ArrayList<>();
+//
+//        List<WebElement> bookList = driver.findElements(By.className("goodsTxtInfo"));
+//        List<String> bookUrlList = new ArrayList<>();
+//        for(WebElement book : bookList) {
+//            WebElement aTag = book.findElement(By.tagName("a"));
+//            String bookUrl = aTag.getAttribute("href");
+//            bookUrlList.add(bookUrl);
+//        }
+//
+//        for(String bookUrl : bookUrlList) {
+//            String isCrawled = (String) redisTemplate.opsForValue().get("id:"+bookUrl);
+//            log.info("현재까지 크롤링 된 책 갯수 : "+crawledBookList.size()+ " ******* ");
+//            if(crawledBookList.size() >= CRAWLING_NEW_BOOK_VALUE) break;
+//            if(isCrawled != null && isCrawled.equals("crawled") || crawlingMap.containsKey(bookUrl)) {
+//                log.info("이미 크롤링 된 책입니다.");
+//            }
+//            else {
+//              crawlingMap.put(bookUrl, "crawled");
+//              getInfo(bookUrl);
+//            }
+//        }
+//
+//    }
 
 //    국내도서 크롤링 코드, 혹시 모르니 삭제 x
 //    private void getAnotherCategories() throws InterruptedException {
