@@ -1,6 +1,7 @@
 package com.techeer.checkitbatch.domain.selenium;
 
 import com.techeer.checkitbatch.domain.book.entity.Book;
+import com.techeer.checkitbatch.domain.book.repository.BookRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
@@ -22,6 +23,7 @@ import java.util.NoSuchElementException;
 public class Selenium {
     private ChromeDriver driver;
     private final RedisTemplate<String, String> redisTemplate;
+//    private final BookRepository bookRepository;
     private final HashMap<String, String> crawlingMap;
 
     private static final String url = "http://www.yes24.com/main/default.aspx";
@@ -121,11 +123,18 @@ public class Selenium {
         List<WebElement> bookList = driver.findElements(By.xpath("//*[@id='yesBestList']/li"));
         for (WebElement book : bookList) {
             try {
+                WebElement imgTag = book.findElement(By.xpath(".//img[@class='lazy']"));
                 WebElement aTag = book.findElement(By.xpath(".//span[@class='img_grp']/a"));
+
+                String coverImageUrl = imgTag.getAttribute("data-original");
                 String bookUrl = aTag.getAttribute("href");
 
+                if (coverImageUrl != null && coverImageUrl.contains("/L")) {
+                    coverImageUrl = coverImageUrl.replace("/L", "/XL");
+                }
+
                 // 중복확인
-                if (!isAlreadyCrawled(bookUrl)) {
+                if (!isAlreadyCrawled(coverImageUrl)) {
                     getInfo(bookUrl);
                 }
 
@@ -173,6 +182,12 @@ public class Selenium {
 
     private boolean isAlreadyCrawled(String bookUrl) {
         String isCrawled = redisTemplate.opsForValue().get("id:" + bookUrl);
+        // mysql로 조회하고 중복 확인
+//        boolean isCrawled = bookRepository.existsByCoverImageUrlAndIsDeletedFalse(bookUrl);
+//        if (isCrawled) {
+//            log.info("이미 크롤링된 책: {}", bookUrl);
+//            return true;
+//        }
         if (isCrawled != null && isCrawled.equals("crawled")) {
             log.info("이미 크롤링된 책: {}", bookUrl);
             return true;

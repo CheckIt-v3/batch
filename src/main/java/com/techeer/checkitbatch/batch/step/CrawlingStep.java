@@ -2,6 +2,7 @@ package com.techeer.checkitbatch.batch.step;
 
 import com.techeer.checkitbatch.batch.StepExecutionLoggerListener;
 import com.techeer.checkitbatch.domain.book.entity.Book;
+import com.techeer.checkitbatch.domain.book.repository.BookRepository;
 import com.techeer.checkitbatch.domain.selenium.Selenium;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +32,7 @@ public class CrawlingStep {
     private final StepBuilderFactory stepBuilderFactory;
     private final RedisTemplate<String, String> redisTemplate;
     private final HashMap<String, String> crawlingMap;
-//    @Autowired
+//    private final BookRepository bookRepository;
     @Qualifier("mysqlDataSource")
     private final DataSource mysqlDataSource;
     private final StepExecutionLoggerListener listener;
@@ -74,10 +75,9 @@ public class CrawlingStep {
     public ItemWriter<Book> jdbcItemWriter() {
         JdbcBatchItemWriter<Book> writer = new JdbcBatchItemWriter<>();
         writer.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>());
-        writer.setSql("INSERT INTO books_batch (title, author, publisher, cover_image_url, pages, height, width, thickness, category, is_deleted, created_at) " +
+        writer.setSql("INSERT INTO book_test (title, author, publisher, cover_image_url, pages, height, width, thickness, category, is_deleted, created_at) " +
                 "VALUES (:title, :author, :publisher, :coverImageUrl, :pages, :height, :width, :thickness, :category, false, :createdAt)");
         writer.setDataSource(mysqlDataSource);
-
         return writer;
     }
 
